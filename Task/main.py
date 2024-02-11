@@ -1,24 +1,36 @@
-import sqlite3
-import requests
-import json
+from fastapi import FastAPI
+from elasticsearch import Elasticsearch
 from passw import password
-from requests.auth import HTTPBasicAuth
+import sqlite3
 
-conn = sqlite3.connect('posts.db')
-c = conn.cursor()
+app = FastAPI()
 
-c.execute("SELECT * FROM posts")
+es = Elasticsearch(
+    [{'host': 'localhost', 'port': 9200, 'scheme': 'http'}],
+    http_auth=('elastic', password)
+)
 
-records = c.fetchall()
-
-url = "http://localhost:9200/practice/_doc"
-headers = {'Content-Type': 'application/json'}
-for record in records:
-    doc = {
-        "iD": record[0],
-        "text": record[1]
+@app.get("/search/{text}")
+async def search(text: str):
+    search_query = {
+        "query": {
+            "match": {
+                "text": text
+            }
+        },
+        "size": 20,
+        "sort": [
+             {
+                 "id": {"order": "asc"}  
+             }
+        ]
     }
-    response = requests.post(url, auth=HTTPBasicAuth('elastic', password), headers=headers, data=json.dumps(doc))
 
-    if response.status_code != 201:
-        print(f"Error indexing record {record[0]}: {response.text}")
+    results = es.search(index="practice", body=search_query)
+    return results['hits']['hits']
+
+
+@app.delete("/delete/{id}")
+async def delete(id: str):
+    es.delete(index="practice", id=id)
+    return {"detail": "Document deleted"}
