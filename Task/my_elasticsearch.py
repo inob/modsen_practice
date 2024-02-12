@@ -1,6 +1,8 @@
 import sqlite3
 from elasticsearch import Elasticsearch
 from passw import password
+from datetime import datetime
+
 
 es = Elasticsearch(
     [{'host': 'localhost', 'port': 9200, 'scheme': 'http'}],
@@ -8,36 +10,40 @@ es = Elasticsearch(
 )
 
 
-conn = sqlite3.connect('posts.db')
+mapping = {
+    "mappings": {
+        "properties": {
+            "iD": {"type": "text"},
+            "text": {"type": "text"},
+            "date": {
+                "type": "date",
+                "fields": {
+                    "keyword": { 
+                        "type": "keyword"
+                    }
+                }
+            }
+        }
+    }
+}
+
+# Создайте индекс в Elasticsearch
+es.indices.create(index='note', body=mapping, ignore=400)
+
+# Создайте подключение к SQLite
+conn = sqlite3.connect('database.db')
 cursor = conn.cursor()
 
-cursor.execute("SELECT * FROM posts")
+# Выполните запрос SELECT для получения всех записей из таблицы note
+cursor.execute("SELECT * FROM note")
 rows = cursor.fetchall()
 
-count = 0
+# Индексируйте каждую запись в Elasticsearch
 for row in rows:
-    count += 1
     doc = {
-        'id': str(count),  
-        'date': row[3],
-        'text': row[2]
+        'iD': row[0],
+        'text': row[1],
+        'date': datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S'),  # предполагается, что дата в формате 'YYYY-MM-DD HH:MM:SS'
     }
-    es.index(index='practice', id=doc['id'], body=doc)  
+    res = es.index(index='note', body=doc)
 
-conn.close()
-
-
-# search_query = {
-#     "query": {
-#         "match": {
-#             "id": "1500"
-#         }
-#     }
-# }
-
-# # Отправляем запрос и получаем результат
-# results = es.search(index="practice", body=search_query)
-
-# # Обрабатываем результат
-# for hit in results['hits']['hits']:
-#     print(hit['_source'])
