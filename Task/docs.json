@@ -1,0 +1,64 @@
+openapi: 3.0.0
+info:
+  title: Simple Text Search Service
+  version: 1.0.0
+paths:
+  /search/{text}:
+    get:
+      summary: Search for documents
+      parameters:
+        - name: text
+          in: path
+          required: true
+          description: Text to search for
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of documents that match the search text
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+  /delete/{id}:
+    delete:
+      summary: Delete a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the document to delete
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Confirmation of deletion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+components:
+  schemas:
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique ID of the document
+        rubrics:
+          type: array
+          items:
+            type: string
+          description: Array of rubrics
+        text:
+          type: string
+          description: Text of the document
+        created_date:
+          type: string
+          format: date-time
+          description: Date the document was created
