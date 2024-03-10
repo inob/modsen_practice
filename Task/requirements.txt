@@ -1,5 +1,0 @@
- sqlite3
- elasticsearch
- fastapi
- pandas
- uvicorn
